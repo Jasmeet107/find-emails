@@ -1,4 +1,3 @@
-
 #!/usr/bin/python
 from lxml import html
 from urlparse import urlsplit
