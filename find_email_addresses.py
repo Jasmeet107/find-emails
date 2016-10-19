@@ -7,9 +7,14 @@ import requests
 import requests.exceptions as exceptions
 import sys
 import argparse
+import time
 
 #Given a website, finds all emails on all discoverable pages on the webiste
 def find_emails(website, max_seconds, *max_emails):
+  now = time.time()
+  print now
+  end = now+max_seconds
+  print end
   if not max_emails: 
     max_emails = float("inf")
   else: 
@@ -29,7 +34,10 @@ def find_emails(website, max_seconds, *max_emails):
   finished_pages = set()
   #Keep track of email addresses that have been printed already
   email_addresses_found = set()
-  while len(all_pages) > 0: 
+  while len(all_pages) > 0:
+    #if we've reached our time limit, don't go into the next loop
+    if time.time() > end: 
+      return
     page_url = all_pages.pop(0)
     #If we've already checked the page, skip it
     if page_url in finished_pages:
@@ -75,7 +83,6 @@ def find_emails(website, max_seconds, *max_emails):
         print email_address
       email_addresses_found.add(email_address)
       if len(email_addresses_found) >= max_emails:
-        print "got here"
         return
     for email_link in tree.xpath('//a[starts-with(@href, "mailto")]/@href'):
       #Make sure we're getting email address only
