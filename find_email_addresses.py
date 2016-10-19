@@ -6,9 +6,14 @@ import re
 import requests
 import requests.exceptions as exceptions
 import sys
+import argparse
 
 #Given a website, finds all emails on all discoverable pages on the webiste
-def find_emails(website):
+def find_emails(website, max_seconds, *max_emails):
+  if not max_emails: 
+    max_emails = float("inf")
+  else: 
+    max_emails = max_emails[0]
   #Format url correctly and extract the domain name 
   parsed = urlsplit(website)
   if parsed.scheme: 
@@ -21,9 +26,9 @@ def find_emails(website):
   #Create a queue of pages that need to be checked, 
   #and a list of pages that have already been checked
   all_pages = [starting_page]
-  finished_pages = []
+  finished_pages = set()
   #Keep track of email addresses that have been printed already
-  email_addresses_found = []
+  email_addresses_found = set()
   while len(all_pages) > 0: 
     page_url = all_pages.pop(0)
     #If we've already checked the page, skip it
@@ -36,12 +41,12 @@ def find_emails(website):
       if page_headers.get('content-type'):
         header = page_headers.get('content-type').lower()
         if not header.startswith('text/html') and not header.startswith('application/xhtml+xml'):
-          finished_pages.append(str(page_url))
+          finished_pages.add(str(page_url))
           continue
       page = requests.get(page_url)
     except (exceptions.SSLError, exceptions.TooManyRedirects, exceptions.ConnectionError, exceptions.InvalidURL): 
       print "Cannot access " + page_url + "."
-      finished_pages.append(str(page_url))
+      finished_pages.add(str(page_url))
       continue
     #Create a tree of the page HTML
     tree = html.fromstring(page.content)
@@ -68,18 +73,33 @@ def find_emails(website):
     for email_address in re.findall(r'(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)', page_text):
       if email_address not in email_addresses_found:
         print email_address
-      email_addresses_found.append(email_address)
+      email_addresses_found.add(email_address)
+      if len(email_addresses_found) >= max_emails:
+        print "got here"
+        return
     for email_link in tree.xpath('//a[starts-with(@href, "mailto")]/@href'):
       #Make sure we're getting email address only
       mailto_content = email_link.split(":", 1)[1]
       email_address = mailto_content.split("?", 1)[0]
       if email_address not in email_addresses_found:
         print email_address
-      email_addresses_found.append(email_address)
-    finished_pages.append(str(page_url))
+      email_addresses_found.add(email_address)
+      if len(email_addresses_found) >= max_emails:
+        return
+    finished_pages.add(str(page_url))
 
+def main(args):
+  if args.max_emails:
+    find_emails(args.website, args.max_seconds, args.max_emails)
+  else: 
+    find_emails(args.website, args.max_seconds)
 
-domain_name = sys.argv[1]
-find_emails(domain_name)
+if __name__ == '__main__':
+  parser = argparse.ArgumentParser(description="Find emails on website.")
+  parser.add_argument('website', type=str)
+  parser.add_argument('-s', '--max-seconds', type=float, default=100)
+  parser.add_argument('-e', '--max-emails', type=int)
+  main(parser.parse_args())
+
 
 
