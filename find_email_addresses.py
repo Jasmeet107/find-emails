@@ -104,7 +104,7 @@ def main(args):
 if __name__ == '__main__':
   parser = argparse.ArgumentParser(description="Find emails on website.")
   parser.add_argument('website', type=str)
-  parser.add_argument('-s', '--max-seconds', type=float, default=100)
+  parser.add_argument('-s', '--max-seconds', type=float, default=200)
   parser.add_argument('-e', '--max-emails', type=int)
   main(parser.parse_args())
 
